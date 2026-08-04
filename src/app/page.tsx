@@ -15,13 +15,26 @@ export default function Home() {
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const { data: session, status } = useSession();
 
+  React.useEffect(() => {
+    if (session?.user) {
+      fetch('/api/user/cost')
+        .then(res => res.json())
+        .then(data => {
+          if (data.costUsd !== undefined) {
+            setTotalCost(data.costUsd);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [session]);
+
   return (
     <>
       <BillingWidget totalCostUsd={totalCost} />
       <Scene />
       <main className="container" style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <header style={{ marginBottom: '2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <h1 className="text-gradient">Agentic Cinema</h1>
+          <h1 className="text-gradient">Agentic Media Production</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem', marginBottom: '1rem' }}>
             Powered by Google Cloud Agent Builder & Gemini + Firebase
           </p>

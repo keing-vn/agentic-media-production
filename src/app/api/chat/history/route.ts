@@ -18,17 +18,19 @@ export async function GET(req: Request) {
     const snapshot = await db.collection('chat_history')
       .where('user_email', '==', userEmail)
       .where('session_id', '==', sessionId)
+      .orderBy('created_at', 'asc')
+      .limit(50)
       .get();
 
     const messages = snapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
-        role: data.role, // 'user' or 'agent'
+        role: data.role,
         content: data.content,
         created_at: data.created_at?.toDate?.() || new Date()
       };
-    }).sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
+    });
 
     return NextResponse.json({ messages });
   } catch (error: any) {

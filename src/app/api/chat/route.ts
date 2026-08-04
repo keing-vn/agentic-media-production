@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const userEmail = session?.user?.email || 'anonymous';
     
     // Allow frontend to pass a sessionId, or generate one
-    const { message, persona, sessionId = 'default' } = await req.json();
+    const { message, persona, sessionId = 'default', history = [] } = await req.json();
 
     // Save User Message to History
     if (userEmail !== 'anonymous') {
@@ -34,39 +34,51 @@ export async function POST(req: Request) {
       User message: "${message}"
       
       We have a Firestore collection named 'movie_scenes'.
-      Fields: movie_id (string), scene_id (string), genre (string), scene_title (string), script_text (string).
+      Fields: movie_id (string), scene_id (string), genre (string), scene_title (string).
       
       Generate a JSON object representing simple equality query conditions to answer this question.
       Example: {"genre": "Sci-Fi Action"} or {"scene_id": "SCENE_001"}.
-      Only return valid JSON, nothing else. If the question doesn't require a query or is too complex for simple equality, return "NO_QUERY".
+      Only return valid JSON, nothing else. If the question doesn't require a query or is too complex for simple equality, return an empty object {}.
     `;
 
     const queryResponse = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: sqlPrompt,
+      config: {
+        responseMimeType: 'application/json'
+      }
     });
     
-    const queryText = queryResponse.text?.replace(/```json|```/g, '').trim() || 'NO_QUERY';
+    const queryText = queryResponse.text?.trim() || '{}';
 
     let dataContext = '';
 
     // 2. Execute Firestore query if one was generated
-    if (queryText !== 'NO_QUERY') {
+    if (queryText !== '{}') {
       try {
         const queryParams = JSON.parse(queryText);
+        const allowedKeys = ['movie_id', 'scene_id', 'genre', 'scene_title'];
         let collectionRef: FirebaseFirestore.Query = db.collection('movie_scenes');
+        let hasValidQuery = false;
         
         for (const [key, value] of Object.entries(queryParams)) {
-          collectionRef = collectionRef.where(key, '==', value);
+          if (allowedKeys.includes(key)) {
+            collectionRef = collectionRef.where(key, '==', value);
+            hasValidQuery = true;
+          }
         }
         
-        // Limit to 5 results
-        collectionRef = collectionRef.limit(5);
-        
-        const snapshot = await collectionRef.get();
-        const dataset = snapshot.docs.map(doc => doc.data());
-        
-        dataContext = `Firestore Data Result: ${JSON.stringify(dataset)}`;
+        if (hasValidQuery) {
+          // Limit to 5 results
+          collectionRef = collectionRef.limit(5);
+          
+          const snapshot = await collectionRef.get();
+          const dataset = snapshot.docs.map(doc => doc.data());
+          
+          dataContext = `Firestore Data Result: ${JSON.stringify(dataset)}`;
+        } else {
+          dataContext = 'No valid query conditions were provided by the AI.';
+        }
       } catch (dbError: any) {
         dataContext = `Failed to query Firestore: ${dbError.message}`;
       }
@@ -74,22 +86,23 @@ export async function POST(req: Request) {
       dataContext = 'No direct database query was executed for this question.';
     }
 
-    // 3. Synthesize final response using Gemini
-    const finalPrompt = `
-      You are the "Agentic Cinema" AI. 
-      The user is talking to you in the persona of a: ${persona}.
-      User message: "${message}"
-      
-      Here is the data context retrieved from our database:
-      ${dataContext}
-      
-      Formulate a helpful, natural response in Vietnamese. Tailor your tone and vocabulary to the user's persona (e.g., if they are a filmmaker, talk about camera angles and lighting; if a crew member, talk about budget and logistics). 
-      Make sure to incorporate the data context naturally.
-    `;
+    // 3. Synthesize final response using Gemini with Chat History
+    const chatContents = history.map((msg: any) => ({
+      role: msg.role === 'agent' ? 'model' : 'user',
+      parts: [{ text: msg.content }]
+    }));
+
+    // Inject system instructions into the last user message
+    if (chatContents.length > 0) {
+      const lastMsg = chatContents[chatContents.length - 1];
+      if (lastMsg.role === 'user') {
+        lastMsg.parts[0].text += `\n\n[SYSTEM CONTEXT]\nData from database: ${dataContext}\nYou are the "Agentic Media Production" AI. The user is a ${persona}. Respond in Vietnamese naturally, incorporating the data context if relevant.`;
+      }
+    }
 
     const finalResponse = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: finalPrompt,
+      contents: chatContents,
     });
 
     const finalReply = finalResponse.text || "No reply generated";
@@ -109,7 +122,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 4. Calculate Estimated Cost
+    // 4. Calculate Estimated Cost and update Firestore
     const queryTokens = queryResponse.usageMetadata || { promptTokenCount: 0, candidatesTokenCount: 0 };
     const finalTokens = finalResponse.usageMetadata || { promptTokenCount: 0, candidatesTokenCount: 0 };
     
@@ -118,6 +131,18 @@ export async function POST(req: Request) {
     
     // Pricing for gemini-2.5-flash: $0.075 per 1M input, $0.30 per 1M output
     const costUsd = (totalInput * 0.075 / 1000000) + (totalOutput * 0.30 / 1000000);
+
+    // Save total cost to users collection
+    if (userEmail !== 'anonymous') {
+      try {
+        const { FieldValue } = await import('firebase-admin/firestore');
+        await db.collection('users').doc(userEmail).set({
+          total_cost_usd: FieldValue.increment(costUsd)
+        }, { merge: true });
+      } catch (e) {
+        console.error("Failed to update user cost", e);
+      }
+    }
 
     return NextResponse.json({ 
       reply: finalReply,

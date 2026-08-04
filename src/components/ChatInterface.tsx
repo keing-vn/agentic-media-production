@@ -40,7 +40,7 @@ export default function ChatInterface({ persona, onCostUpdate, sessionId = 'defa
           setMessages(data.messages);
         } else {
           setMessages([
-            { role: 'agent', content: `Xin chào! Tôi là AI Agentic Cinema. Bạn đang truy cập với tư cách: ${persona}. Tôi có thể giúp gì cho bạn?` }
+            { role: 'agent', content: `Xin chào! Tôi là AI Agentic Media Production. Bạn đang truy cập với tư cách: ${persona}. Tôi có thể giúp gì cho bạn?` }
           ]);
         }
       } catch (err) {
@@ -61,10 +61,13 @@ export default function ChatInterface({ persona, onCostUpdate, sessionId = 'defa
     setIsLoading(true);
 
     try {
+      // Send the last 10 messages (including the new user message) to maintain context
+      const historyToSend = [...messages, { role: 'user', content: userMessage }].slice(-10);
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage, persona, sessionId })
+        body: JSON.stringify({ message: userMessage, persona, sessionId, history: historyToSend })
       });
       
       const data = await response.json();

@@ -15,6 +15,8 @@ export async function GET(req: Request) {
 
     const snapshot = await db.collection('user_library')
       .where('user_email', '==', userEmail)
+      .orderBy('created_at', 'desc')
+      .limit(20)
       .get();
 
     const items = snapshot.docs.map(doc => {
@@ -26,7 +28,7 @@ export async function GET(req: Request) {
         tags: data.tags || [],
         created_at: data.created_at?.toDate?.() || new Date()
       };
-    }).sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+    });
 
     return NextResponse.json({ items });
   } catch (error: any) {
