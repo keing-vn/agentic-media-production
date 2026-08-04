@@ -1,28 +1,40 @@
-# Walkthrough: Agentic Cinema Hackathon Project
+# Walkthrough: Agentic Media Production
 
-> [!TIP]
-> Dự án đã được thiết lập thành công tại thư mục `scratch/agentic-cinema-clickhouse`. 
-> 
-> Bạn có thể chạy ứng dụng bằng cách mở terminal ở thư mục trên và dùng lệnh `npm run dev`.
+## What was accomplished
+We successfully transformed the application into "Agentic Media Production" by completing a full migration to Firebase and implementing user-centric features.
 
-## Các Thay đổi Đã Thực hiện
+### 1. Database Migration
+- Removed all dependencies on ClickHouse.
+- Integrated Firebase Admin SDK.
+- Created `seed-firestore.ts` and successfully seeded the `movie_scenes` collection.
 
-### 1. Cấu trúc Dự án (Next.js)
-- Khởi tạo Next.js App Router (không dùng Tailwind).
-- Giao diện được xây dựng bằng Vanilla CSS cao cấp với ngôn ngữ thiết kế Glassmorphism, nền Dark Mode và hiệu ứng chuyển động mượt mà (micro-animations). File CSS tại [globals.css](file:///C:/Users/Kei/.gemini/antigravity/scratch/agentic-cinema-clickhouse/src/app/globals.css).
+### 2. Google Authentication
+- Added `next-auth` to the project.
+- Configured Google OAuth, ensuring users can only interact with the application when logged in.
+- UI elements now accurately reflect the logged-in user.
 
-### 2. Các Thành phần Giao diện (Components)
-- [PersonaSelector.tsx](file:///C:/Users/Kei/.gemini/antigravity/scratch/agentic-cinema-clickhouse/src/components/PersonaSelector.tsx): Cho phép người dùng chọn vai trò của mình (Biên kịch, Đạo diễn, Hậu trường, Fan) để AI Agent có thể điều chỉnh ngữ cảnh và logic định tuyến (routing logic).
-- [ChatInterface.tsx](file:///C:/Users/Kei/.gemini/antigravity/scratch/agentic-cinema-clickhouse/src/components/ChatInterface.tsx): Cửa sổ chat tương tác tích hợp hiệu ứng loading và tự động cuộn (auto-scroll) mượt mà.
+### 3. Persistent Chat History
+- Built the backend infrastructure to save each AI interaction to the `chat_history` collection.
+- Frontend was modified to fetch and display this history on initial load.
+- Resolved Firebase composite index limitations by utilizing in-memory sorting.
 
-### 3. Tích hợp AI (API Route)
-- [route.ts](file:///C:/Users/Kei/.gemini/antigravity/scratch/agentic-cinema-clickhouse/src/app/api/chat/route.ts): Endpoint nhận tin nhắn và định tuyến logic tùy vào *Persona*. Mô phỏng việc tích hợp Agent Builder, mô hình Gemini và truy vấn từ máy chủ Clickhouse (giả lập kết quả trả về của MCP Server).
+### 4. My Library
+- Developed the "My Library" feature, allowing users to bookmark responses.
+- Responses are saved directly into the `user_library` collection.
+- Created `LibraryModal.tsx` to retrieve and display bookmarked scripts beautifully.
 
-## Kết quả Kiểm tra
-- **Thiết kế & Bố cục:** Giao diện Responsive chia 2 cột (Desktop) và xếp chồng (Mobile) hiển thị đúng như mong đợi. Theme màu neon trên nền tối hoạt động hoàn hảo.
-- **Tính năng AI Routing:** Khi chuyển đổi giữa các vai trò khác nhau, Agent trả về thông tin giả lập từ mô hình Gemini và nguồn dữ liệu nội bộ đặc thù cho vai trò đó (giả lập backend từ Clickhouse).
+### 5. Rename & Security fixes
+- Fully renamed the project from "Agentic Cinema Clickhouse" to "Agentic Media Production".
+- Handled GitHub push protection by untracking sensitive `.json` credentials and updating `.gitignore`.
 
-## Các bước tiếp theo
-- Kết nối ứng dụng trực tiếp tới Google Cloud Agent Builder thật.
-- Thay thế đoạn giả lập trong `route.ts` bằng các cuộc gọi API MCP thực thụ (thông qua SDK của Clickhouse).
-- Bổ sung tài liệu vào repository theo đúng tiêu chuẩn mã nguồn mở của Hackathon.
+## What was tested
+- **Firebase Initialization:** Confirmed `firebase-admin` works flawlessly inside the App Router environment.
+- **Login Flow:** Verified the Google sign-in works as intended.
+- **Data Persistence:** Confirmed that messages and bookmarked items remain saved in Firestore after refreshing.
+- **Deployment Safety:** Ensured secret tokens were excluded from Git tracking.
+
+## Validation Results
+- The application runs successfully in the development environment.
+- No `undefined` or runtime errors occur during authentication.
+- API interactions accurately log data into their respective Firestore collections.
+- Git Push Protection issue was completely resolved.

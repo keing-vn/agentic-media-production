@@ -1,46 +1,42 @@
-# Kế hoạch Triển khai: Agentic Cinema Hackathon
+# Implementation Plan: Agentic Media Production 🎬
 
-## Mô tả Mục tiêu
-Xây dựng một ứng dụng web để tham gia **Agentic Cinema: The Blockbuster Hackathon**, đáp ứng đầy đủ các yêu cầu của ban tổ chức. 
-Dựa trên cuộc phỏng vấn, dự án sẽ có cấu trúc như sau:
-- **Partner Track:** Clickhouse (Sử dụng Clickhouse MCP server).
-- **Đối tượng:** Phục vụ tất cả các nhóm (Biên kịch, Đạo diễn, Hậu trường, Người hâm mộ).
-- **Nền tảng:** Web App (Sử dụng Next.js).
-- **Kiến trúc AI:** Một Agent trung tâm (Single Routing Agent) được xây dựng bằng **Google Cloud Agent Builder** và mô hình **Gemini**, làm nhiệm vụ phân loại yêu cầu và gọi các công cụ (như truy vấn dữ liệu từ Clickhouse) tương ứng với từng nhóm người dùng.
+## Goal Description
+The objective is to pivot the core database of the application from ClickHouse to Firebase Firestore, implement user authentication via Google OAuth (NextAuth), and build out the persistent "Chat History" and "My Library" features. The project has also been renamed from "Agentic Cinema" to "Agentic Media Production".
 
-> [!NOTE]
-> Dự án sẽ được khởi tạo tại thư mục `C:\Users\Kei\.gemini\antigravity\scratch\agentic-cinema-clickhouse`.
+## Proposed Changes
 
-## Đánh giá từ Người dùng (User Review Required)
-> [!IMPORTANT]
-> - Vui lòng xác nhận việc sử dụng framework **Next.js** kết hợp với **Vanilla CSS** (nhằm đảm bảo giao diện cao cấp, ấn tượng, theo đúng nguyên tắc thiết kế).
-> - Bạn có đồng ý với cấu trúc thư mục khởi tạo dự án không?
+### 1. Database Migration (ClickHouse -> Firebase)
+- **[DELETE]** `src/lib/clickhouse.ts`: Remove all ClickHouse related configurations and logic.
+- **[NEW]** `src/lib/firebase.ts`: Initialize the Firebase Admin SDK using Service Account credentials.
+- **[NEW]** `src/scripts/seed-firestore.ts`: Create a new script to seed `movie_scenes` data into Firestore.
 
-## Câu hỏi Mở (Open Questions)
-> [!WARNING]
-> 1. **Dữ liệu Clickhouse:** Bạn muốn sử dụng Clickhouse Cloud hay chạy một instance cục bộ (Docker) để làm cơ sở dữ liệu mẫu cho Agent?
-> 2. **Tài khoản Google Cloud:** Bạn đã thiết lập sẵn Google Cloud Project và kích hoạt Agent Builder API cùng tài khoản thanh toán chưa?
+### 2. Authentication (NextAuth + Google)
+- **[NEW]** `src/lib/auth.ts`: Configure NextAuth options with Google Provider.
+- **[NEW]** `src/app/api/auth/[...nextauth]/route.ts`: Expose NextAuth API routes.
+- **[MODIFY]** `src/components/SessionProviderWrapper.tsx`: Wrap the app in `SessionProvider` for client-side auth state.
+- **[MODIFY]** `src/app/page.tsx`: Add "Sign in with Google" prompt if the user is unauthenticated.
 
-## Các Thay đổi Đề xuất (Proposed Changes)
+### 3. Persistent Chat History
+- **[NEW]** `src/app/api/chat/history/route.ts`: Endpoint to fetch previous chat sessions from the `chat_history` collection.
+- **[MODIFY]** `src/app/api/chat/route.ts`: Save each new message (user prompt and agent response) into Firestore under the user's email.
+- **[MODIFY]** `src/components/ChatInterface.tsx`: Load chat history on mount and implement auto-scrolling.
 
-### 1. Khởi tạo Dự án
-- [NEW] Khởi tạo Next.js App tại thư mục `scratch/agentic-cinema-clickhouse`.
-- [NEW] Cấu trúc thư mục chuẩn cho Next.js (App Router, components, lib, styles).
+### 4. My Library Feature
+- **[NEW]** `src/app/api/library/route.ts`: Handle saving (POST) and retrieving (GET) bookmarked scripts and insights.
+- **[NEW]** `src/components/LibraryModal.tsx`: A modal UI to display all saved items in the user's library.
+- **[MODIFY]** `src/components/ChatInterface.tsx`: Add a "Save to Library" button on AI responses.
 
-### 2. Thiết kế Giao diện (UI/UX)
-- [NEW] `app/globals.css`: Triển khai hệ thống CSS cao cấp, hỗ trợ dark mode, hiệu ứng glassmorphism và micro-animations.
-- [NEW] `components/ChatInterface.tsx`: Giao diện tương tác với Agent trung tâm dành cho người dùng.
-- [NEW] `components/PersonaSelector.tsx`: Thành phần để người dùng chọn vai trò (Biên kịch, Đạo diễn, v.v.), giúp Agent có bối cảnh tốt hơn.
+### 5. Rename & Branding
+- **[MODIFY]** `package.json`, `README.md`, `src/app/page.tsx`, `src/components/ChatInterface.tsx`: Update all references of "Agentic Cinema Clickhouse" to "Agentic Media Production".
 
-### 3. Tích hợp AI và Backend
-- [NEW] `app/api/chat/route.ts`: API Route giao tiếp với Google Cloud Agent Builder.
-- [NEW] Cấu hình tích hợp Clickhouse MCP để Agent có khả năng trích xuất dữ liệu (ví dụ: truy vấn ngân sách cho Studio Crews, hoặc số liệu doanh thu/fan theories cho Fans).
+## Verification Plan
 
-## Kế hoạch Kiểm thử (Verification Plan)
-### Kiểm thử Tự động (Automated Tests)
-- Chạy `npm run lint` và `npm run build` để đảm bảo không có lỗi biên dịch.
+### Automated Tests
+- Check if `npm run dev` builds successfully without TypeScript errors.
 
-### Kiểm thử Thủ công (Manual Verification)
-- Khởi chạy môi trường phát triển cục bộ (`npm run dev`).
-- Chọn từng persona và đặt câu hỏi để kiểm tra khả năng định tuyến (routing) của Agent trung tâm.
-- Kiểm tra kết nối với Clickhouse qua những truy vấn dữ liệu lớn mô phỏng ngành điện ảnh.
+### Manual Verification
+- Test signing in with a Google Account.
+- Verify that messages are persistent across browser refreshes.
+- Test the "Bookmark/Save to Library" button.
+- Verify that opening the Library Modal displays the correctly saved data from Firestore.
+- Check the Git repository to ensure secrets are untracked.
