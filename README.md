@@ -68,6 +68,28 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## 🚀 Deployment
+
+### Deploying to Vercel (Recommended)
+1. Go to [Vercel](https://vercel.com/new).
+2. Import your GitHub repository (`keing-vn/agentic-media-production`).
+3. Add the following Environment Variables in the Vercel dashboard:
+   - `NEXTAUTH_URL` (Set to your production domain, e.g., `https://your-app.vercel.app`)
+   - `NEXTAUTH_SECRET`
+   - `GEMINI_API_KEY`
+   - `FIREBASE_PROJECT_ID`
+   - `FIREBASE_CLIENT_EMAIL`
+   - `FIREBASE_PRIVATE_KEY` (ensure `\n` is preserved)
+4. Click **Deploy**.
+
+### Deploying to Firebase App Hosting
+Firebase App Hosting natively supports Next.js:
+1. Open the [Firebase Console](https://console.firebase.google.com/).
+2. Go to **App Hosting** and click **Get started**.
+3. Connect your GitHub repository (`keing-vn/agentic-media-production`).
+4. Set the root directory to `/` and select the `main` branch.
+5. Create a new backend, link your environment variables via Cloud Secret Manager, and deploy!
+
 ## 📁 Key File Structure
 
 - `src/app/page.tsx`: The main UI layout including the Chat, Library Modal, and Persona Selector.
